@@ -30,30 +30,27 @@ def getConnection(url):
 def getEventInfo(url):
 	readmoreUrls = set()
 
-	### search events in the page
+	### search event in the page
 	# connect to the event page
-	eventBsObj = getConnection("http://www.clubberia.com" + url)
-	# find all events in the page
-	events = eventBsObj.findAll("dl", {"class":"landscape"})
+	eventBsObj = getConnection("https://www.clubberia.com"+url)
+	# find all events in page
+	events = eventBsObj.findAll("div", {"class":"c-post__frame"})
 	for event in events:
-		# if fav genre then go to the readmore page
-		genres = event.findAll("div", {"class":"genre"})
+		# find fav genre and go to sp page
+		genres = event.findAll("div", {"class":"c-post__genre"})
 		for genre in genres:
 			if genre.get_text().lower() in fav_genres:
-				readmore_url = event.find("dt").find("a").attrs['href']
+				readmore_url = event.find("a").attrs['href']
 				readmoreUrls.add(readmore_url)
 
-	### get detail info of each event and print em
+	### get detail info of each event and print'em
 	for readmoreUrl in readmoreUrls:
 		detailBsObj = getConnection("http://www.clubberia.com"+readmoreUrl)	
-		detail = detailBsObj.find("div", {"class":"visualTop"})
-		# pick up required info
-		date = detail.find("item", {"itemprop":"startDate"}).get_text()
-		if re.search("^.*(Fri).*$", date) is None and re.search("^.*(Sat).*$", date) is None:
-			continue		
-		name = detail.find("h2").get_text()
+		detail = detailBsObj.find("article", {"class":"c-article"})
+		# pick up required information	
+		name = detail.find("h1", {"class":"c-article__heading"}).get_text()
 		genre = ''
-		tmp_genres = detail.findAll("div", {"class":"genre"})
+		tmp_genres = detail.findAll("div", {"class":"c-post__genre"})
 		dirty = False
 		for tmp_genre in tmp_genres:
 			if not dirty:
@@ -61,32 +58,12 @@ def getEventInfo(url):
 				dirty = True
 			else:
 				genre += (", " + tmp_genre.get_text())
-		venue = detail.find("item", {"itemprop":"location"}).find("a").find("item").get_text()
-		fee = detail.findChild("span", recursive=False)
-		if fee is None:
-			fee = ""
-		else:
-			fee = fee.get_text()
-		tmp_discount = detail.find("div", {"class":"ticketservices"})
-		if tmp_discount is None:
-			discount = "No"
-		else:
-			discount = "Yes"
-		dj = ''
-		tmp_djs = detail.findAll("a", href=re.compile("^(/ja/artists/).*$"))
-		dirty = False
-		for tmp_dj in tmp_djs:
-			if not dirty:
-				dj += tmp_dj.get_text()
-				dirty = True
-			else:
-				dj += (", " + tmp_dj.get_text())
 		# print the event list 
 		print("-------------")
-		print("Event: %s\nGenre: %s\nVenue: %s\nDate: %s\nFee: %s\nDiscount: %s\nLineup: %s\nURL: http://www.clubberia.com%s\n" %(name,genre,venue,date,fee,discount,dj,readmoreUrl))
+		print("Event: %s\nGenre: %s\nURL: http://www.clubberia.com%s\n" %(name,genre,readmoreUrl))
 
 	# move on to the next page
-	nextPage = eventBsObj.find("p", {"id":"pageNext"})
+	nextPage = eventBsObj.find("div", {"class":"p-events-filter__arrow--next"})
 	nextPageUrl = nextPage.find("a")
 	if nextPageUrl is not None:
 		nextPageUrl = nextPageUrl.attrs['href']
@@ -97,4 +74,4 @@ def getEventInfo(url):
 
 # start here
 if __name__ == "__main__":
-	getEventInfo("/ja/events/japan/tokyo/")
+	getEventInfo("/ja/events/?action_Event_List=true&region_cd=tokyo&genre_cd=&option=&keyword=&schedule_date=&submit=SEARCH")
