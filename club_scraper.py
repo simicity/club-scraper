@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 import re
 import requests
 
-# target genres
 fav_genres = ["dubstep", "edm", "hiphop"]
 
 #-------------------------------#
@@ -37,18 +36,18 @@ def getEventInfo(url):
 	# find all events in the page
 	events = eventBsObj.findAll("dl", {"class":"landscape"})
 	for event in events:
-		# is it for favorite genres? if so, go to the readmore page
+		# if fav genre then go to the readmore page
 		genres = event.findAll("div", {"class":"genre"})
 		for genre in genres:
 			if genre.get_text().lower() in fav_genres:
 				readmore_url = event.find("dt").find("a").attrs['href']
 				readmoreUrls.add(readmore_url)
 
-	### collect detail information of each event and print'em
+	### get detail info of each event and print em
 	for readmoreUrl in readmoreUrls:
 		detailBsObj = getConnection("http://www.clubberia.com"+readmoreUrl)	
 		detail = detailBsObj.find("div", {"class":"visualTop"})
-		# pick up nessesary information
+		# pick up required info
 		date = detail.find("item", {"itemprop":"startDate"}).get_text()
 		if re.search("^.*(Fri).*$", date) is None and re.search("^.*(Sat).*$", date) is None:
 			continue		
