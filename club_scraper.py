@@ -47,8 +47,10 @@ def getEventInfo(url):
 	for readmoreUrl in readmoreUrls:
 		detailBsObj = getConnection("http://www.clubberia.com"+readmoreUrl)	
 		detail = detailBsObj.find("article", {"class":"c-article"})
+
 		# pick up required information	
 		name = detail.find("h1", {"class":"c-article__heading"}).get_text()
+		
 		genre = ''
 		tmp_genres = detail.findAll("div", {"class":"c-post__genre"})
 		dirty = False
@@ -58,9 +60,18 @@ def getEventInfo(url):
 				dirty = True
 			else:
 				genre += (", " + tmp_genre.get_text())
+
+		data_dl = detail.find("dl", {"class":"c-article-info"})
+		data_dt_all = data_dl.findAll("dt", {"class":"c-article-info__term"})
+		data_dd_all = data_dl.findAll("dd", {"class":"c-article-info__description"})
+
 		# print the event list 
 		print("-------------")
-		print("Event: %s\nGenre: %s\nURL: http://www.clubberia.com%s\n" %(name,genre,readmoreUrl))
+		print("Event: %s\nGenre: %s\n" %(name,genre))
+		print("More Info:")
+		for data_dt, data_dd in zip(data_dt_all, data_dd_all):
+			print(" %s\n %s" %(data_dt.get_text().strip(), data_dd.get_text().strip()))
+		print("URL: http://www.clubberia.com%s\n" %(readmoreUrl))
 
 	# move on to the next page
 	nextPage = eventBsObj.find("div", {"class":"p-events-filter__arrow--next"})
