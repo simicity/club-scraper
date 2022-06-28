@@ -1,15 +1,12 @@
+import sys
 from urllib.error import HTTPError
 from urllib.error import URLError
-from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-import re
 import requests
 
-fav_genres = ["dubstep", "edm", "hiphop"]
+fav_genres = ["house", "edm", "hiphop"]
+EVENT_SITE_BASE_URL = "https://clubberia.com"
 
-#-------------------------------#
-# function: connect to the page 
-#-------------------------------#
 def getConnection(url):
 	try:
 		session = requests.Session()
@@ -22,37 +19,30 @@ def getConnection(url):
 		print("Not found")
 		return None
 	return BeautifulSoup(req.text, "html.parser")
-# def getConnection End #
 
-#----------------------------------------------------------#
-# function: collect information of each event in each page
-#----------------------------------------------------------#
-def getEventInfo(url):
-	readmoreUrls = set()
 
-	### search event in the page
+def getEventInfo(url, pref_genres):
+	readmore_urls = set()
 	# connect to the event page
-	eventBsObj = getConnection("https://www.clubberia.com"+url)
+	eventBsObj = getConnection(EVENT_SITE_BASE_URL+url)
 	# find all events in page
-	events = eventBsObj.findAll("div", {"class":"c-post__frame"})
+	events = eventBsObj.find_all("div", {"class":"c-post__frame"})
 	for event in events:
 		# find fav genre and go to sp page
-		genres = event.findAll("div", {"class":"c-post__genre"})
-		for genre in genres:
-			if genre.get_text().lower() in fav_genres:
-				readmore_url = event.find("a").attrs['href']
-				readmoreUrls.add(readmore_url)
+		event_genres = event.find_all("div", {"class":"c-post__genre"})
+		for event_genre in event_genres:
+			if event_genre.get_text().lower() in pref_genres:
+				readmore_urls.add(event.find("a").attrs['href'])
 
-	### get detail info of each event and print'em
-	for readmoreUrl in readmoreUrls:
-		detailBsObj = getConnection("http://www.clubberia.com"+readmoreUrl)	
+	for readmore_url in readmore_urls:
+		detailBsObj = getConnection(EVENT_SITE_BASE_URL + readmore_url)	
 		detail = detailBsObj.find("article", {"class":"c-article"})
 
 		# pick up required information	
 		name = detail.find("h1", {"class":"c-article__heading"}).get_text()
 		
 		genre = ''
-		tmp_genres = detail.findAll("div", {"class":"c-post__genre"})
+		tmp_genres = detail.find_all("div", {"class":"c-post__genre"})
 		dirty = False
 		for tmp_genre in tmp_genres:
 			if not dirty:
@@ -67,22 +57,28 @@ def getEventInfo(url):
 
 		# print the event list 
 		print("-------------")
-		print("Event: %s\nGenre: %s\n" %(name,genre))
+		print(f"Event: {name}\nGenre: {genre}")
 		print("More Info:")
 		for data_dt, data_dd in zip(data_dt_all, data_dd_all):
 			print(" %s\n %s" %(data_dt.get_text().strip(), data_dd.get_text().strip()))
-		print("URL: http://www.clubberia.com%s\n" %(readmoreUrl))
+		print(f"URL: {EVENT_SITE_BASE_URL}{readmore_url}\n")
 
 	# move on to the next page
 	nextPage = eventBsObj.find("div", {"class":"p-events-filter__arrow--next"})
 	nextPageUrl = nextPage.find("a")
-	if nextPageUrl is not None:
+	if nextPageUrl:
 		nextPageUrl = nextPageUrl.attrs['href']
 	else:
 		return
-	getEventInfo(nextPageUrl)
-# def getEventInfo End #
+	getEventInfo(nextPageUrl, pref_genres)
 
-# start here
+
+def main():
+	if len(sys.argv) >= 2:
+		fav_genres = [str(sys.argv[i]) for i in range(1, len(sys.argv))]
+		getEventInfo("/ja/events/?action_Event_List=true&region_cd=tokyo&genre_cd=&option=&keyword=&schedule_date=&submit=SEARCH", fav_genres)
+	else:
+		print("Usage: python club_scraper.py [genre]+")
+
 if __name__ == "__main__":
-	getEventInfo("/ja/events/?action_Event_List=true&region_cd=tokyo&genre_cd=&option=&keyword=&schedule_date=&submit=SEARCH")
+	main()
